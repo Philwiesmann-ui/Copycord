@@ -130,6 +130,21 @@
           </a>
         </li>
 
+        {% if show_logout %}
+        <li>
+          <a class="menu-item" href="/logout" rel="noopener">
+            <span class="mi" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="1.5" aria-hidden="true" focusable="false">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+              </svg>
+            </span>
+            <span class="mi-label">Sign out</span>
+          </a>
+        </li>
+        {% endif %}
+
       </ul>
     </nav>
 
@@ -549,6 +564,65 @@
                 class="toggle-track"><span class="toggle-thumb"></span></span></label>
           </div>
         </div>
+      </div>
+    </details>
+
+    <!-- ─── Login & Registration ─── -->
+    <details class="card srv-proxy-card" id="auth-settings-card">
+      <summary class="srv-proxy-summary">
+        <h3>Login &amp; Registration</h3>
+        <span class="card-chev" aria-hidden="true">&#9662;</span>
+      </summary>
+      <div class="srv-proxy-body">
+        <p class="srv-proxy-hint">
+          Everyone can sign in with e-mail and password. Add your own Discord and Google OAuth apps here to
+          also offer the "Continue with…" buttons.
+        </p>
+
+        <div class="proxy-settings-label">
+          <span>Public dashboard URL</span>
+          <span class="proxy-settings-sublabel">Used to build the OAuth redirect URLs</span>
+        </div>
+        <input type="text" id="auth-public-url" class="input auth-input" placeholder="https://copycord.example.com"
+          spellcheck="false" autocomplete="off" />
+
+        <div class="proxy-settings-label auth-field-gap">
+          <span>Discord Client ID &amp; Secret</span>
+          <span class="proxy-settings-sublabel">From the Discord Developer Portal → your app → OAuth2</span>
+        </div>
+        <input type="text" id="auth-discord-id" class="input auth-input" placeholder="Discord client ID"
+          spellcheck="false" autocomplete="off" />
+        <input type="password" id="auth-discord-secret" class="input auth-input" placeholder="Discord client secret"
+          autocomplete="new-password" />
+
+        <div class="proxy-settings-label auth-field-gap">
+          <span>Google Client ID &amp; Secret</span>
+          <span class="proxy-settings-sublabel">From Google Cloud Console → APIs &amp; Services → Credentials</span>
+        </div>
+        <input type="text" id="auth-google-id" class="input auth-input" placeholder="Google client ID" spellcheck="false"
+          autocomplete="off" />
+        <input type="password" id="auth-google-secret" class="input auth-input" placeholder="Google client secret"
+          autocomplete="new-password" />
+
+        <div class="proxy-settings-label auth-field-gap">
+          <span>Redirect URL to register</span>
+          <span class="proxy-settings-sublabel">Paste this into the provider's OAuth settings</span>
+        </div>
+        <input type="text" id="auth-redirect-discord" class="input auth-input" readonly
+          placeholder="http://localhost:3000/auth/discord/callback" />
+        <input type="text" id="auth-redirect-google" class="input auth-input" readonly
+          placeholder="http://localhost:3000/auth/google/callback" />
+
+        <div class="notif-event-row auth-field-gap">
+          <div class="proxy-settings-label">
+            <span>Allow registrations</span>
+            <span class="proxy-settings-sublabel">Let people create their own account</span>
+          </div>
+          <label class="toggle notif-toggle"><input type="checkbox" id="auth-allow-registration" checked /><span
+              class="toggle-track"><span class="toggle-thumb"></span></span></label>
+        </div>
+
+        <p class="srv-proxy-hint" id="auth-status"></p>
       </div>
     </details>
 

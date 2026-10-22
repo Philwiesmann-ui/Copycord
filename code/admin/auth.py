@@ -15,14 +15,12 @@ from pathlib import Path
 from typing import Optional, Dict
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Request, Form, status
-from fastapi.responses import RedirectResponse, PlainTextResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request, status
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from admin.logging_setup import LOGGER
-from common.config import CURRENT_VERSION
 
 BASE_DIR = Path(__file__).resolve().parent        
 PROJECT_ROOT = BASE_DIR.parent  
@@ -31,12 +29,24 @@ load_dotenv(PROJECT_ROOT / ".env")
 ADMIN_COOKIE_NAME = "cc_admin"
 SESSION_MAX_AGE = 60 * 60 * 12
 
+# Paths that stay reachable without a session: the login/registration pages
+# and the OAuth round-trip, static assets and the health probe.
+PUBLIC_PATHS = (
+    "/login",
+    "/register",
+    "/logout",
+    "/auth/",
+    "/health",
+    "/static",
+)
+
 
 ADMIN_PASSWORD: str = ""
 _session_signer: URLSafeTimedSerializer | None = None
+_account_checker = None
 
 
-def _client_ip(request: Request) -> str:
+def client_ip(request: Request) -> str:
     """
     Best-effort client IP for logging, aware of reverse proxies / Cloudflare.
     """
@@ -111,6 +121,57 @@ def _get_signer() -> URLSafeTimedSerializer:
     return _session_signer
 
 
+def create_session_token(payload: Dict) -> str:
+    """Sign an arbitrary session payload for the admin cookie."""
+    return _get_signer().dumps(payload)
+
+
+def set_session_cookie(response, request: Request, token: str) -> None:
+    """Attach a signed session token to a response."""
+    response.set_cookie(
+        ADMIN_COOKIE_NAME,
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=SESSION_MAX_AGE,
+        secure=request.url.scheme == "https",
+    )
+
+
+def clear_session_cookie(response) -> None:
+    response.delete_cookie(ADMIN_COOKIE_NAME)
+
+
+def set_account_checker(checker) -> None:
+    """
+    Registered by admin.web_auth: reports whether any dashboard account
+    exists, so accounts alone can require a login (without PASSWORD set).
+    """
+    global _account_checker
+    _account_checker = checker
+
+
+def login_gate_active() -> bool:
+    """
+    Is a session required at all?
+
+    Active when a shared admin password is configured (the classic setup) or
+    when at least one dashboard account exists.
+    """
+    if ADMIN_PASSWORD:
+        return True
+
+    checker = _account_checker
+    if checker is None:
+        return False
+
+    try:
+        return bool(checker())
+    except Exception:
+        LOGGER.warning("Account check failed", exc_info=True)
+        return False
+
+
 def decode_admin_session(token: str | None) -> Optional[Dict]:
     """
     Return session payload if token is valid & not expired, else None.
@@ -125,11 +186,13 @@ def decode_admin_session(token: str | None) -> Optional[Dict]:
 
 class PasswordGuardMiddleware(BaseHTTPMiddleware):
     """
-    Very simple 'one password for everything' gate.
+    Session gate for the admin dashboard.
 
-    - If PASSWORD is not set, it does nothing.
-    - If PASSWORD is set:
-        * /login and /health (and static assets) are always allowed
+    - When neither a shared PASSWORD nor any dashboard account exists, it
+      does nothing (login disabled, as documented in the README).
+    - Otherwise:
+        * the login/registration/oauth pages, /health and static assets are
+          always allowed
         * every other request must have a valid signed session cookie,
           otherwise you get redirected to /login (for GET/HEAD)
           or a 401 for other methods.
@@ -137,16 +200,12 @@ class PasswordGuardMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
 
-        if not ADMIN_PASSWORD:
+        if not login_gate_active():
             return await call_next(request)
 
         path = request.url.path or "/"
 
-        if (
-            path.startswith("/login")
-            or path.startswith("/health")
-            or path.startswith("/static")
-        ):
+        if path.startswith(PUBLIC_PATHS):
             return await call_next(request)
 
         token = request.cookies.get(ADMIN_COOKIE_NAME)
@@ -162,14 +221,16 @@ class PasswordGuardMiddleware(BaseHTTPMiddleware):
         )
 
 
-def init_admin_auth(app: FastAPI, templates: Jinja2Templates, data_dir: Path) -> None:
+def init_admin_auth(app: FastAPI, data_dir: Path) -> None:
     """
-    Initialize admin login / cookie auth:
+    Initialize admin sessions:
 
     - Reads PASSWORD & SECRET_KEY from env
     - Sets up the session signer
     - Adds PasswordGuardMiddleware
-    - Registers /login GET+POST routes
+
+    The login, registration and OAuth routes are registered separately by
+    admin.web_auth.init_web_auth().
     """
     global ADMIN_PASSWORD, _session_signer
 
@@ -180,71 +241,3 @@ def init_admin_auth(app: FastAPI, templates: Jinja2Templates, data_dir: Path) ->
     _session_signer = URLSafeTimedSerializer(secret_key, salt="copycord-admin")
 
     app.add_middleware(PasswordGuardMiddleware)
-
-    @app.get("/login", response_class=HTMLResponse)
-    async def login_page(request: Request):
-
-        if not ADMIN_PASSWORD:
-            return RedirectResponse("/", status_code=status.HTTP_302_FOUND)
-
-        sess = decode_admin_session(request.cookies.get(ADMIN_COOKIE_NAME))
-        if sess and sess.get("ok") is True:
-            LOGGER.info(
-                "Admin login page hit by already-authenticated client %s; redirecting to dashboard",
-                _client_ip(request),
-            )
-            return RedirectResponse("/", status_code=status.HTTP_302_FOUND)
-
-        return templates.TemplateResponse(
-            "login.html",
-            {
-                "request": request,
-                "version": CURRENT_VERSION,
-                "error": None,
-            },
-        )
-
-    @app.post("/login", response_class=HTMLResponse)
-    async def login_submit(
-        request: Request,
-        password: str = Form(...),
-    ):
-
-        if not ADMIN_PASSWORD:
-            return RedirectResponse("/", status_code=status.HTTP_302_FOUND)
-
-        if password == ADMIN_PASSWORD:
-
-            LOGGER.info(
-                "Admin login SUCCESS from %s",
-                _client_ip(request),
-            )
-
-            token = _get_signer().dumps({"ok": True})
-
-            resp = RedirectResponse("/", status_code=status.HTTP_302_FOUND)
-            secure = request.url.scheme == "https"
-            resp.set_cookie(
-                ADMIN_COOKIE_NAME,
-                token,
-                httponly=True,
-                samesite="lax",
-                max_age=SESSION_MAX_AGE,
-                secure=secure,
-            )
-            return resp
-
-        LOGGER.warning(
-            "Admin login FAILED from %s",
-            _client_ip(request),
-        )
-
-        return templates.TemplateResponse(
-            "login.html",
-            {
-                "request": request,
-                "version": CURRENT_VERSION,
-                "error": "Incorrect password. Please try again.",
-            },
-            status_code=status.HTTP_401_UNAUTHORIZED,
-        )

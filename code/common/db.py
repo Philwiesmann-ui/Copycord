@@ -102,6 +102,52 @@ class DBManager:
         )
 
         self._ensure_table(
+            name="web_users",
+            create_sql_template="""
+                CREATE TABLE {table} (
+                    user_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email         TEXT NOT NULL DEFAULT '',
+                    username      TEXT NOT NULL DEFAULT '',
+                    password_hash TEXT NOT NULL DEFAULT '',
+                    provider      TEXT NOT NULL DEFAULT 'local',
+                    provider_id   TEXT NOT NULL DEFAULT '',
+                    avatar_url    TEXT NOT NULL DEFAULT '',
+                    created_at    INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER)),
+                    last_login    INTEGER,
+                    last_updated  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """,
+            required_columns={
+                "user_id",
+                "email",
+                "username",
+                "password_hash",
+                "provider",
+                "provider_id",
+                "avatar_url",
+                "created_at",
+                "last_login",
+                "last_updated",
+            },
+            copy_map={
+                "user_id": "user_id",
+                "email": "email",
+                "username": "username",
+                "password_hash": "password_hash",
+                "provider": "provider",
+                "provider_id": "provider_id",
+                "avatar_url": "avatar_url",
+                "created_at": "created_at",
+                "last_login": "last_login",
+                "last_updated": "last_updated",
+            },
+            post_sql=[
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_web_users_email ON web_users(email) WHERE email <> '';",
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_web_users_provider ON web_users(provider, provider_id) WHERE provider_id <> '';",
+            ],
+        )
+
+        self._ensure_table(
             name="filters",
             create_sql_template="""
                 CREATE TABLE {table} (
@@ -1312,6 +1358,91 @@ class DBManager:
             r["key"]: r["value"]
             for r in self.conn.execute("SELECT key, value FROM app_config")
         }
+
+    # ------------------------------------------------------------------
+    #  Dashboard user accounts (login / registration)
+    # ------------------------------------------------------------------
+
+    def create_web_user(
+        self,
+        email: str,
+        username: str,
+        password_hash: str = "",
+        provider: str = "local",
+        provider_id: str = "",
+        avatar_url: str = "",
+    ) -> int | None:
+        """
+        Insert a dashboard user. Returns the new user_id, or None if the
+        e-mail address is already taken.
+        """
+        with self.lock, self.conn:
+            try:
+                cur = self.conn.execute(
+                    "INSERT INTO web_users(email, username, password_hash, provider, provider_id, avatar_url) "
+                    "VALUES(?,?,?,?,?,?)",
+                    (
+                        (email or "").strip().lower(),
+                        (username or "").strip(),
+                        password_hash or "",
+                        provider or "local",
+                        str(provider_id or ""),
+                        avatar_url or "",
+                    ),
+                )
+                return int(cur.lastrowid)
+            except sqlite3.IntegrityError:
+                return None
+
+    def get_web_user_by_email(self, email: str) -> sqlite3.Row | None:
+        email = (email or "").strip().lower()
+        if not email:
+            return None
+        return self.conn.execute(
+            "SELECT * FROM web_users WHERE email = ?", (email,)
+        ).fetchone()
+
+    def get_web_user_by_provider(
+        self, provider: str, provider_id: str
+    ) -> sqlite3.Row | None:
+        if not provider or not provider_id:
+            return None
+        return self.conn.execute(
+            "SELECT * FROM web_users WHERE provider = ? AND provider_id = ?",
+            (provider, str(provider_id)),
+        ).fetchone()
+
+    def get_web_user(self, user_id: int) -> sqlite3.Row | None:
+        return self.conn.execute(
+            "SELECT * FROM web_users WHERE user_id = ?", (int(user_id),)
+        ).fetchone()
+
+    def link_web_user_provider(
+        self,
+        user_id: int,
+        provider: str,
+        provider_id: str,
+        avatar_url: str = "",
+    ) -> None:
+        """Attach an OAuth identity to an existing account."""
+        with self.lock, self.conn:
+            self.conn.execute(
+                "UPDATE web_users SET provider = ?, provider_id = ?, avatar_url = COALESCE(NULLIF(?, ''), avatar_url), "
+                "last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
+                (provider, str(provider_id), avatar_url or "", int(user_id)),
+            )
+
+    def touch_web_user_login(self, user_id: int) -> None:
+        with self.lock, self.conn:
+            self.conn.execute(
+                "UPDATE web_users SET last_login = CAST(strftime('%s','now') AS INTEGER), "
+                "last_updated = CURRENT_TIMESTAMP WHERE user_id = ?",
+                (int(user_id),),
+            )
+
+    def count_web_users(self) -> int:
+        row = self.conn.execute("SELECT COUNT(*) AS n FROM web_users").fetchone()
+        return int(row["n"]) if row else 0
 
     def get_applied_asset_hash(self, cloned_guild_id: int, kind: str) -> str:
         """

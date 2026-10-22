@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Copycord · Register</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/assets/main.css?v={{ version }}">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+</head>
+
+<body class="login-page">
+    <main class="page-main">
+        <section class="login-wrapper">
+
+            <img src="/static/logo.png" alt="Copycord Logo" class="login-logo" />
+
+            <div class="login-card">
+                <h1 class="login-title">Create an account</h1>
+                <p class="login-subtitle">Join Copycord and manage your clones.</p>
+
+                {% if error %}
+                <div class="login-error">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="/register" class="login-form" id="register-form">
+                    <label for="username" class="login-label">Username</label>
+                    <input id="username" name="username" type="text" autocomplete="username" class="login-input"
+                        placeholder="Your name" value="{{ username or '' }}" maxlength="32" autofocus />
+
+                    <label for="email" class="login-label login-label-gap">E-mail</label>
+                    <input id="email" name="email" type="email" autocomplete="email" class="login-input"
+                        placeholder="you@example.com" value="{{ email or '' }}" />
+
+                    <label for="password" class="login-label login-label-gap">Password</label>
+                    <div class="token-wrap login-token-wrap">
+                        <input id="password" name="password" type="password" autocomplete="new-password"
+                            class="login-input token-input" />
+
+                        <button type="button" class="reveal-btn" data-target="password" aria-pressed="false"
+                            aria-label="Show password">
+                            <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                viewBox="0 0 24 24">
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+
+                            <svg class="icon-eye-off" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" viewBox="0 0 24 24" style="display:none">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.4 18.4 0 0 1 5.06-5.94M9.9 9.9A3 3 0 0 0 9 12a3 3 0 0 0 3 3 3 3 0 0 0 2.1-.9M1 1l22 22" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <label for="password_confirm" class="login-label login-label-gap">Confirm password</label>
+                    <input id="password_confirm" name="password_confirm" type="password" autocomplete="new-password"
+                        class="login-input" />
+
+                    <button type="submit" class="login-button" disabled>
+                        Create account
+                    </button>
+                </form>
+
+                {% if providers %}
+                <div class="login-divider">
+                    <span>OR</span>
+                </div>
+
+                <div class="oauth-list">
+                    {% for p in providers %}
+                    <a class="oauth-btn oauth-btn-{{ p.key }}" href="/auth/{{ p.key }}"
+                        title="{{ 'Sign up with ' ~ p.label if p.configured else p.label ~ ' sign-in is not configured yet' }}">
+                        {% if p.key == 'discord' %}
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                            <path
+                                d="M20.317 4.3698a19.7913 19.7913 0 0 0-4.8851-1.5152.0741.0741 0 0 0-.0785.0371c-.211.375-.4447.8648-.6083 1.2495-1.8447-.2762-3.6804-.2762-5.4868 0-.1636-.3933-.4058-.8745-.6177-1.2495a.077.077 0 0 0-.0785-.037 19.7363 19.7363 0 0 0-4.8852 1.515.0699.0699 0 0 0-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 0 0 .0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 0 0 .0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 0 0-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 0 1-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 0 1 .0776-.0105c3.9279 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 0 1 .0785.0095c.1202.099.246.198.3728.2924a.077.077 0 0 1-.0066.1276 12.2986 12.2986 0 0 1-1.873.8914.0766.0766 0 0 0-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 0 0 .0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 0 0 .0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 0 0-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9565-2.4189 2.157-2.4189 1.2108 0 2.175.1 2.1569 2.4188 0 1.3333-.9565 2.4191-2.157 2.4191zm7.9748 0c-1.183 0-2.157-1.0857-2.157-2.419 0-1.3332.957-2.4189 2.157-2.4189 1.2108 0 2.175.1 2.157 2.4188 0 1.3333-.9462 2.4191-2.157 2.4191Z" />
+                        </svg>
+                        {% else %}
+                        <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+                            <path fill="#EA4335"
+                                d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                            <path fill="#4285F4"
+                                d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                            <path fill="#FBBC05"
+                                d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                            <path fill="#34A853"
+                                d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                        </svg>
+                        {% endif %}
+                        <span>Sign up with {{ p.label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <p class="login-alt">
+                    Already have an account? <a href="/login">Sign in</a>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer id="fixed-footer" role="contentinfo" aria-label="Site footer">
+        <div class="footer-bar">
+            <span class="footer-brand" aria-label="Copycord version {{ version or 'dev' }}">
+                <span class="brand-name">Copycord</span>
+                <span class="brand-sep" aria-hidden="true">&middot;</span>
+                <bdi class="brand-version" id="footer-version">{% if version %}<a id="footer-version-link" href="{{ links.github }}/releases/tag/{{ version }}" target="_blank" rel="noopener" class="footer-link" data-default-href="{{ links.github }}/releases/tag/{{ version }}">{{ version }}</a>{% else %}<span id="footer-version-text">dev</span>{% endif %}</bdi>
+            </span>
+
+            <div class="footer-links" role="group" aria-label="Links">
+                <a class="footer-link" href="{{ links.github }}" target="_blank" rel="noopener" aria-label="GitHub">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M12,2A10,10 0 0,0 2,12c0,4.42 2.87,8.16 6.84,9.49.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.71-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1.01.07 1.54 1.04 1.54 1.04.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.8c.85 0 1.71.11 2.51.33 1.9-1.29 2.74-1.02 2.74-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .26.18.58.69.48A10 10 0 0 0 22 12 10 10 0 0 0 12 2Z" />
+                    </svg>
+                </a>
+
+                <a class="footer-link" href="{{ links.discord }}" target="_blank" rel="noopener"
+                    aria-label="Join our Discord">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="20" height="20">
+                        <path
+                            d="M20.317 4.3698a19.7913 19.7913 0 0 0-4.8851-1.5152.0741.0741 0 0 0-.0785.0371c-.211.375-.4447.8648-.6083 1.2495-1.8447-.2762-3.6804-.2762-5.4868 0-.1636-.3933-.4058-.8745-.6177-1.2495a.077.077 0 0 0-.0785-.037 19.7363 19.7363 0 0 0-4.8852 1.515.0699.0699 0 0 0-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 0 0 .0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 0 0 .0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 0 0-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 0 1-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 0 1 .0776-.0105c3.9279 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 0 1 .0785.0095c.1202.099.246.198.3728.2924a.077.077 0 0 1-.0066.1276 12.2986 12.2986 0 0 1-1.873.8914.0766.0766 0 0 0-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 0 0 .0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 0 0 .0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 0 0-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9565-2.4189 2.157-2.4189 1.2108 0 2.175.1 2.1569 2.4188 0 1.3333-.9565 2.4191-2.157 2.4191zm7.9748 0c-1.183 0-2.157-1.0857-2.157-2.419 0-1.3332.957-2.4189 2.157-2.4189 1.2108 0 2.175.1 2.157 2.4188 0 1.3333-.9462 2.4191-2.157 2.4191Z" />
+                    </svg>
+                </a>
+
+                <a class="footer-link" href="{{ links.kofi }}" target="_blank" rel="noopener"
+                    aria-label="Buy me a coffee">
+                    <img src="https://storage.ko-fi.com/cdn/brandasset/v2/kofi_symbol.png" alt="" width="18" height="18"
+                        loading="lazy" />
+                </a>
+            </div>
+        </div>
+        <div id="update-notice">
+            New Update Available
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+            const form = document.getElementById('register-form');
+            if (!form) return;
+
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const submitBtn = form.querySelector('.login-button');
+
+            form.querySelectorAll('.reveal-btn[data-target]').forEach((btn) => {
+                const target = document.getElementById(btn.dataset.target);
+                if (!target) return;
+
+                const eyeOn = btn.querySelector('.icon-eye');
+                const eyeOff = btn.querySelector('.icon-eye-off');
+
+                btn.addEventListener('click', () => {
+                    const isHidden = target.type === 'password';
+
+                    target.type = isHidden ? 'text' : 'password';
+                    btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+                    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+
+                    if (eyeOn) eyeOn.style.display = isHidden ? 'none' : '';
+                    if (eyeOff) eyeOff.style.display = isHidden ? '' : 'none';
+                });
+            });
+
+            function updateButtonState() {
+                const ready = emailInput.value.trim().length > 0 &&
+                    passwordInput.value.trim().length > 0;
+                submitBtn.disabled = !ready;
+            }
+
+            updateButtonState();
+            form.addEventListener('input', updateButtonState);
+        })();
+    </script>
+</body>
+
+</html>

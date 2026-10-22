@@ -6468,8 +6468,113 @@
       });
     }
 
+    // ─── Login & Registration Settings ──────────────────────────────────
+    const authCard            = document.getElementById("auth-settings-card");
+    const authPublicUrl       = document.getElementById("auth-public-url");
+    const authDiscordId       = document.getElementById("auth-discord-id");
+    const authDiscordSecret   = document.getElementById("auth-discord-secret");
+    const authGoogleId        = document.getElementById("auth-google-id");
+    const authGoogleSecret    = document.getElementById("auth-google-secret");
+    const authAllowRegister   = document.getElementById("auth-allow-registration");
+    const authRedirectDiscord = document.getElementById("auth-redirect-discord");
+    const authRedirectGoogle  = document.getElementById("auth-redirect-google");
+    const authStatus          = document.getElementById("auth-status");
+
+    function authPayload() {
+      return {
+        WEB_AUTH_PUBLIC_BASE_URL: authPublicUrl ? authPublicUrl.value.trim() : "",
+        DISCORD_CLIENT_ID: authDiscordId ? authDiscordId.value.trim() : "",
+        DISCORD_CLIENT_SECRET: authDiscordSecret ? authDiscordSecret.value.trim() : "",
+        GOOGLE_CLIENT_ID: authGoogleId ? authGoogleId.value.trim() : "",
+        GOOGLE_CLIENT_SECRET: authGoogleSecret ? authGoogleSecret.value.trim() : "",
+        WEB_AUTH_ALLOW_REGISTRATION: authAllowRegister ? authAllowRegister.checked : true,
+      };
+    }
+
+    function applyAuthSettings(j) {
+      const s = j.settings || {};
+
+      if (authPublicUrl) authPublicUrl.value = s.public_base_url || "";
+      if (authDiscordId) authDiscordId.value = s.discord_client_id || "";
+      if (authDiscordSecret) authDiscordSecret.value = s.discord_client_secret || "";
+      if (authGoogleId) authGoogleId.value = s.google_client_id || "";
+      if (authGoogleSecret) authGoogleSecret.value = s.google_client_secret || "";
+      if (authAllowRegister) authAllowRegister.checked = s.allow_registration !== false;
+
+      const uris = {};
+      (j.providers || []).forEach((p) => { uris[p.key] = p.redirect_uri; });
+      if (authRedirectDiscord) authRedirectDiscord.value = uris.discord || "";
+      if (authRedirectGoogle) authRedirectGoogle.value = uris.google || "";
+
+      if (authStatus) {
+        const count  = j.user_count || 0;
+        const states = [
+          `${count} account${count === 1 ? "" : "s"}`,
+          s.discord_configured ? "Discord ready" : "Discord not configured",
+          s.google_configured ? "Google ready" : "Google not configured",
+        ];
+        if (j.password_login) states.push("admin password login active");
+        authStatus.textContent = states.join(" · ");
+      }
+    }
+
+    async function saveAuthSettings() {
+      try {
+        const r = await fetch("/api/auth/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(authPayload()),
+        });
+        const j = await r.json();
+        if (!j.ok) {
+          showToast(j.error || "Could not save sign-in settings", { type: "error" });
+          return;
+        }
+        applyAuthSettings(j);
+      } catch (e) {
+        console.error(e);
+        showToast("Network error saving sign-in settings", { type: "error" });
+      }
+    }
+
+    let _authSaveTimer = null;
+    function scheduleAuthSave() {
+      clearTimeout(_authSaveTimer);
+      _authSaveTimer = setTimeout(saveAuthSettings, 700);
+    }
+
+    async function loadAuthSettings() {
+      try {
+        const r = await fetch("/api/auth/settings");
+        const j = await r.json();
+        if (!j.ok) return;
+        applyAuthSettings(j);
+
+        if (authPublicUrl && !authPublicUrl.value.trim()) {
+          // first visit: remember the address the dashboard is opened with
+          authPublicUrl.value = window.location.origin;
+          saveAuthSettings();
+        }
+      } catch (e) { console.error("Failed to load sign-in settings:", e); }
+    }
+
+    [authPublicUrl, authDiscordId, authDiscordSecret, authGoogleId, authGoogleSecret].forEach((el) => {
+      if (el) el.addEventListener("input", scheduleAuthSave);
+    });
+    if (authAllowRegister) authAllowRegister.addEventListener("change", scheduleAuthSave);
+
+    if (authCard) {
+      const aKey = "cpc.auth-settings-card-open";
+      const aSaved = localStorage.getItem(aKey);
+      if (aSaved !== null) authCard.open = aSaved === "1";
+      authCard.addEventListener("toggle", () => {
+        localStorage.setItem(aKey, authCard.open ? "1" : "0");
+      });
+    }
+
     loadSyncSettings();
     loadNotifSettings();
+    loadAuthSettings();
   });
 
   ["server", "client"].forEach((role) => {

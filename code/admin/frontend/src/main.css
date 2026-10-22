@@ -7876,6 +7876,117 @@ body.login-page {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
 }
 
+.login-label-gap {
+  margin-top: 14px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin: 18px 0 14px;
+
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #3f4147;
+}
+
+.oauth-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border-radius: 3px;
+  border: 1px solid transparent;
+
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+
+  transition: 0.15s ease background-color, 0.15s ease border-color;
+}
+
+.oauth-btn svg {
+  flex: 0 0 auto;
+}
+
+.oauth-btn-discord {
+  background: #5865f2;
+  color: #ffffff;
+}
+
+.oauth-btn-discord:hover {
+  background: #4752c4;
+}
+
+.oauth-btn-google {
+  background: #ffffff;
+  color: #1e1f22;
+}
+
+.oauth-btn-google:hover {
+  background: #e3e5e8;
+}
+
+.login-alt {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.login-alt a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.login-alt a:hover {
+  text-decoration: underline;
+}
+
+/* ─── Login & Registration settings card ─── */
+.auth-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-top: 6px;
+
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.auth-input + .auth-input {
+  margin-top: 8px;
+}
+
+.auth-input[readonly] {
+  color: var(--muted);
+  cursor: default;
+}
+
+.auth-field-gap {
+  margin-top: 16px;
+}
+
 #roleBlocksModal .modal-content {
   width: min(640px, 94vw);
   max-height: 80vh;

@@ -27,7 +27,8 @@ import time
 import logging
 from dotenv import load_dotenv
 from typing import Dict, List, Set, Literal, Optional, Any, Union
-from admin.auth import init_admin_auth
+from admin.auth import init_admin_auth, login_gate_active
+from admin.web_auth import init_web_auth
 from admin.logging_setup import (
     LOGGER,
     get_logger,
@@ -354,7 +355,8 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.globals.setdefault("links", {})
 app.include_router(links_router)
 shutdown_event = asyncio.Event()
-init_admin_auth(app, templates, DATA_DIR)
+init_admin_auth(app, DATA_DIR)
+init_web_auth(app, templates, db)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -1708,6 +1710,7 @@ async def index(request: Request):
             "server_status": s_server,
             "client_status": s_client,
             "both_running": both_running,
+            "show_logout": login_gate_active(),
             "version": CURRENT_VERSION,
         },
     )

@@ -13273,3 +13273,18 @@ tr.log-expanded td {
 .srv-proxy-rotation-section.is-locked select {
   cursor: not-allowed;
 }
+
+/* Phones: the runtime table needs ~363px of intrinsic width, which used to
+   stretch the whole page ~16px past the viewport. Tighter gutters plus a
+   viewport-pinned main column keep everything inside the screen. */
+@media (max-width: 640px) {
+  body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .container {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+}
